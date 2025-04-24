@@ -1,7 +1,111 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
-class ShareAssetsScreen extends StatelessWidget {
+class ShareAssetsScreen extends StatefulWidget {
   const ShareAssetsScreen({super.key});
+
+  @override
+  State<ShareAssetsScreen> createState() => _ShareAssetsScreenState();
+}
+
+class _ShareAssetsScreenState extends State<ShareAssetsScreen> {
+  bool _isExporting = false;
+  String _exportStatus = '';
+
+  Future<void> _exportAssetsToCSV() async {
+    setState(() {
+      _isExporting = true;
+      _exportStatus = 'Exporting assets...';
+    });
+
+    try {
+      final QuerySnapshot<Map<String, dynamic>> snapshot =
+          await FirebaseFirestore.instance.collection('assets').get();
+
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _isExporting = false;
+          _exportStatus = 'No assets to export.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No assets to export.')),
+        );
+        return;
+      }
+
+      // Extract data for CSV
+      List<List<dynamic>> assetData = [
+        <String>[
+          'Asset Number',
+          'Item Name',
+          'Serial Number',
+          'Description',
+          'Category',
+          'Model',
+          'Warranty',
+          'Assigned To',
+          'Site',
+          'Location',
+          'Sub Location',
+          'Department',
+          'Floor',
+          'Room',
+          'Status',
+        ],
+        ...snapshot.docs.map((doc) {
+          final data = doc.data();
+          return [
+            data['assetNumber'] ?? '',
+            data['itemName'] ?? '',
+            data['serialNumber'] ?? '',
+            data['itemDescription'] ?? '',
+            data['category'] ?? '',
+            data['model'] ?? '',
+            data['warrantyInformation'] ?? '',
+            data['assignedTo'] ?? '',
+            data['site'] ?? '',
+            data['location'] ?? '',
+            data['subLocation'] ?? '',
+            data['department'] ?? '',
+            data['floor'] ?? '',
+            data['room'] ?? '',
+            data['status'] ?? '',
+          ];
+        }),
+      ];
+
+      // Convert to CSV string
+      String csv = const ListToCsvConverter().convert(assetData);
+
+      // Get temporary directory
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/assets.csv';
+      final File file = File(path);
+
+      // Write CSV to file
+      await file.writeAsString(csv);
+
+      // Share the file
+      await Share.shareXFiles([XFile(path)], text: 'Here are your assets in CSV format.');
+
+      setState(() {
+        _isExporting = false;
+        _exportStatus = 'Assets exported and shared successfully.';
+      });
+    } catch (e) {
+      setState(() {
+        _isExporting = false;
+        _exportStatus = 'Error exporting assets: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error exporting assets: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +127,7 @@ class ShareAssetsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/share.png', // Your arrow icon
+                  'assets/share.png', // Your share icon
                   height: 80,
                 ),
                 const SizedBox(height: 16),
@@ -55,7 +159,7 @@ class ShareAssetsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Text(
-                    "Would you like to share your assets? Click the button below.",
+                    "Would you like to share your assets? Click the button below to export them as a CSV file.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -66,12 +170,7 @@ class ShareAssetsScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Implement export functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Export feature coming soon!")),
-                        );
-                      },
+                      onPressed: _isExporting ? null : _exportAssetsToCSV,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF25314C),
                         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -79,17 +178,31 @@ class ShareAssetsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        'Export',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      child: _isExporting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Export as CSV',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1,
+                              ),
+                            ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  if (_exportStatus.isNotEmpty)
+                    Text(
+                      _exportStatus,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _exportStatus.startsWith('Error')
+                            ? Colors.red
+                            : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                 ],
               ),
             ),

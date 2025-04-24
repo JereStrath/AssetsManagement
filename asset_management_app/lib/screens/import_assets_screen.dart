@@ -1,7 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
 
-class ImportAssetsPage extends StatelessWidget {
+class ImportAssetsPage extends StatefulWidget {
   const ImportAssetsPage({super.key});
+
+  @override
+  State<ImportAssetsPage> createState() => _ImportAssetsPageState();
+}
+
+class _ImportAssetsPageState extends State<ImportAssetsPage> {
+  String? _selectedFilePath;
+  String _importStatus = '';
+  bool _isImporting = false;
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.any, // You can specify the file type if needed (e.g., FileType.CSV)
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      setState(() {
+        _selectedFilePath = result.files.first.path;
+        _importStatus = ''; // Reset import status on new file selection
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Selected file: ${path.basename(_selectedFilePath!)}')),
+      );
+    } else {
+      // User canceled the picker
+    }
+  }
+
+  Future<void> _importAssets() async {
+    if (_selectedFilePath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a file to import.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isImporting = true;
+      _importStatus = 'Importing...';
+    });
+
+    try {
+      // Simulate import process (replace with your actual import logic)
+      await Future.delayed(const Duration(seconds: 3));
+
+      // For demonstration purposes, let's just read the file path
+      File importedFile = File(_selectedFilePath!);
+      if (await importedFile.exists()) {
+        setState(() {
+          _importStatus = 'Import successful!';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Assets imported successfully.')),
+        );
+      } else {
+        setState(() {
+          _importStatus = 'Error: Could not read the selected file.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Could not read the selected file.')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _importStatus = 'Import failed: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
+    } finally {
+      setState(() {
+        _isImporting = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +144,7 @@ class ImportAssetsPage extends StatelessWidget {
                     width: double.infinity,
                     height: 60,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Handle file picker or import logic here
-                      },
+                      onPressed: _isImporting ? null : _pickFile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF273654),
                         shape: RoundedRectangleBorder(
@@ -76,7 +152,7 @@ class ImportAssetsPage extends StatelessWidget {
                         ),
                       ),
                       child: const Text(
-                        'Import',
+                        'Select File',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -86,6 +162,53 @@ class ImportAssetsPage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  if (_selectedFilePath != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        'Selected File: ${path.basename(_selectedFilePath!)}',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: _isImporting ? null : _importAssets,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF273654),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: _isImporting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Import',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                  if (_importStatus.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Text(
+                        _importStatus,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _importStatus.startsWith('Error') ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

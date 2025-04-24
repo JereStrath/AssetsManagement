@@ -15,35 +15,62 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  bool _isSigningUp = false; // To show loading state
+  String? _signUpError; // To display error messages
 
   void signUpUser() async {
+    setState(() {
+      _isSigningUp = true;
+      _signUpError = null; // Clear previous error
+    });
+
     User? user = await _authService.signUp(
       emailController.text.trim(),
       passwordController.text.trim(),
     );
 
+    setState(() {
+      _isSigningUp = false;
+    });
+
     if (user != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
+      setState(() {
+        _signUpError = "Sign Up Failed. Please check your credentials or try again.";
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sign Up Failed")),
+        SnackBar(content: Text(_signUpError!)),
       );
     }
   }
 
   void googleSignUp() async {
+    setState(() {
+      _isSigningUp = true;
+      _signUpError = null; // Clear previous error
+    });
+
     User? user = await _authService.signInWithGoogle();
+
+    setState(() {
+      _isSigningUp = false;
+    });
+
     if (user != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
+      setState(() {
+        _signUpError = "Google Sign-Up Failed. Please try again.";
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Google Sign-Up Failed")),
+        SnackBar(content: Text(_signUpError!)),
       );
     }
   }
@@ -118,6 +145,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.grey.shade300,
@@ -148,7 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: signUpUser,
+                      onPressed: _isSigningUp ? null : signUpUser,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
@@ -156,10 +184,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text(
-                        "Sign Up",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      child: _isSigningUp
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                          : const Text(
+                              "Sign Up",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -168,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: googleSignUp,
+                          onTap: _isSigningUp ? null : googleSignUp,
                           child: const Text(
                             "Sign up with Google",
                             style: TextStyle(color: Colors.grey),
