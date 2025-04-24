@@ -1,0 +1,844 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+class AssetListScreen extends StatefulWidget {
+  const AssetListScreen({super.key});
+
+  @override
+  _AssetListScreenState createState() => _AssetListScreenState();
+}
+
+class _AssetListScreenState extends State<AssetListScreen> {
+  late List<Asset> assets;
+  List<Asset> filteredAssets = [];
+  String searchQuery = '';
+  String filterCategory = 'All';
+  String filterStatus = 'All';
+  
+  final List<String> categories = ['All', 'Electronics', 'Furniture', 'Vehicles', 'IT Equipment', 'Machinery', 'Other'];
+  final List<String> statuses = ['All', 'Active', 'In Maintenance', 'Retired', 'Damaged'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Sample data - in a real app this would come from a database or API
+    assets = [
+      Asset(
+        id: 'AST001',
+        name: 'Dell XPS 15 Laptop',
+        category: 'Electronics',
+        status: 'Active',
+        assignedTo: 'John Smith',
+        location: 'Main Office - Room 101',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 5)),
+        condition: 4.5,
+      ),
+      Asset(
+        id: 'AST002',
+        name: 'Office Chair (Ergonomic)',
+        category: 'Furniture',
+        status: 'Active',
+        assignedTo: 'Emma Johnson',
+        location: 'Main Office - Room 102',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 30)),
+        condition: 3.8,
+      ),
+      Asset(
+        id: 'AST003',
+        name: 'HP LaserJet Printer',
+        category: 'Electronics',
+        status: 'In Maintenance',
+        assignedTo: 'IT Department',
+        location: 'East Wing - Room 15',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 2)),
+        condition: 2.5,
+      ),
+      Asset(
+        id: 'AST004',
+        name: 'Conference Table',
+        category: 'Furniture',
+        status: 'Active',
+        assignedTo: 'Meeting Room',
+        location: 'West Wing - Room 305',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 120)),
+        condition: 4.0,
+      ),
+      Asset(
+        id: 'AST005',
+        name: 'Company Van',
+        category: 'Vehicles',
+        status: 'Active',
+        assignedTo: 'Logistics Team',
+        location: 'Parking Lot - Spot B12',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 15)),
+        condition: 3.5,
+      ),
+      Asset(
+        id: 'AST006',
+        name: 'MacBook Pro',
+        category: 'Electronics',
+        status: 'Damaged',
+        assignedTo: 'Lisa Wong',
+        location: 'Main Office - Room 218',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 1)),
+        condition: 1.5,
+      ),
+      Asset(
+        id: 'AST007',
+        name: 'Projector',
+        category: 'Electronics',
+        status: 'Active',
+        assignedTo: 'Conference Room A',
+        location: 'North Wing - Room 401',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 45)),
+        condition: 4.2,
+      ),
+      Asset(
+        id: 'AST008',
+        name: 'Filing Cabinet',
+        category: 'Furniture',
+        status: 'Retired',
+        assignedTo: 'Storage',
+        location: 'Basement - Room B01',
+        lastUpdated: DateTime.now().subtract(const Duration(days: 200)),
+        condition: 2.0,
+      ),
+    ];
+    
+    filteredAssets = List.from(assets);
+  }
+
+  void _filterAssets() {
+    setState(() {
+      filteredAssets = assets.where((asset) {
+        // Apply text search
+        final nameMatch = asset.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+                         asset.id.toLowerCase().contains(searchQuery.toLowerCase()) ||
+                         asset.assignedTo.toLowerCase().contains(searchQuery.toLowerCase());
+        
+        // Apply category filter
+        final categoryMatch = filterCategory == 'All' || asset.category == filterCategory;
+        
+        // Apply status filter
+        final statusMatch = filterStatus == 'All' || asset.status == filterStatus;
+        
+        return nameMatch && categoryMatch && statusMatch;
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Asset Inventory'),
+        backgroundColor: Theme.of(context).primaryColor,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              // Navigate to analytics/dashboard page
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                filteredAssets = List.from(assets);
+                searchQuery = '';
+                filterCategory = 'All';
+                filterStatus = 'All';
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.sort),
+            onPressed: () {
+              _showSortOptions();
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Navigate to AddAssetPage
+          Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (context) => const Placeholder()), // Replace with actual AddAssetPage
+          );
+        },
+        backgroundColor: Theme.of(context).primaryColor,
+        child: const Icon(Icons.add),
+      ),
+      body: Column(
+        children: [
+          _buildSearchAndFilterBar(),
+          _buildFilterChips(),
+          Expanded(
+            child: filteredAssets.isEmpty
+              ? _buildEmptyState()
+              : _buildAssetList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+      ),
+      child: TextField(
+        onChanged: (value) {
+          searchQuery = value;
+          _filterAssets();
+        },
+        decoration: InputDecoration(
+          hintText: 'Search by name, ID or assigned person',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              _showFilterDialog();
+            },
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            if (filterCategory != 'All')
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text('Category: $filterCategory'),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  onDeleted: () {
+                    setState(() {
+                      filterCategory = 'All';
+                      _filterAssets();
+                    });
+                  },
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+            if (filterStatus != 'All')
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text('Status: $filterStatus'),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  onDeleted: () {
+                    setState(() {
+                      filterStatus = 'All';
+                      _filterAssets();
+                    });
+                  },
+                  backgroundColor: _getStatusColor(filterStatus).withOpacity(0.1),
+                ),
+              ),
+            if (searchQuery.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text('Search: $searchQuery'),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                  onDeleted: () {
+                    setState(() {
+                      searchQuery = '';
+                      _filterAssets();
+                    });
+                  },
+                  backgroundColor: Colors.grey.shade200,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssetList() {
+    return ListView.builder(
+      itemCount: filteredAssets.length,
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        final asset = filteredAssets[index];
+        return Card(
+          elevation: 1,
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: () {
+              // Navigate to asset details page
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAssetIcon(asset.category),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              asset.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: ${asset.id}',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildStatusBadge(asset.status),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.location_on,
+                          'Location',
+                          asset.location,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.person,
+                          'Assigned To',
+                          asset.assignedTo,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.category,
+                          'Category',
+                          asset.category,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildInfoItem(
+                          Icons.calendar_today,
+                          'Last Updated',
+                          _formatDate(asset.lastUpdated),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildConditionIndicator(asset.condition),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          // Edit asset
+                        },
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          // More options
+                        },
+                        icon: const Icon(Icons.more_horiz, size: 18),
+                        label: const Text('More'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAssetIcon(String category) {
+    IconData icon;
+    Color color;
+    
+    switch (category) {
+      case 'Electronics':
+        icon = Icons.devices;
+        color = Colors.blue;
+        break;
+      case 'Furniture':
+        icon = Icons.chair;
+        color = Colors.brown;
+        break;
+      case 'Vehicles':
+        icon = Icons.directions_car;
+        color = Colors.green;
+        break;
+      case 'IT Equipment':
+        icon = Icons.computer;
+        color = Colors.indigo;
+        break;
+      case 'Machinery':
+        icon = Icons.precision_manufacturing;
+        color = Colors.orange;
+        break;
+      default:
+        icon = Icons.inventory_2;
+        color = Colors.grey;
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        icon,
+        color: color,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _getStatusColor(status).withOpacity(0.5),
+        ),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: _getStatusColor(status),
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Active':
+        return Colors.green;
+      case 'In Maintenance':
+        return Colors.orange;
+      case 'Retired':
+        return Colors.grey;
+      case 'Damaged':
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  Widget _buildInfoItem(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey.shade600,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConditionIndicator(double condition) {
+    Color barColor;
+    String label;
+    
+    if (condition >= 4) {
+      barColor = Colors.green;
+      label = 'Excellent';
+    } else if (condition >= 3) {
+      barColor = Colors.lightGreen;
+      label = 'Good';
+    } else if (condition >= 2) {
+      barColor = Colors.orange;
+      label = 'Fair';
+    } else {
+      barColor = Colors.red;
+      label = 'Poor';
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Condition: ',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: barColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: FractionallySizedBox(
+            widthFactor: condition / 5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No assets found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            searchQuery.isNotEmpty || filterCategory != 'All' || filterStatus != 'All'
+                ? 'Try adjusting your filters'
+                : 'Add your first asset to get started',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              if (searchQuery.isNotEmpty || filterCategory != 'All' || filterStatus != 'All') {
+                setState(() {
+                  searchQuery = '';
+                  filterCategory = 'All';
+                  filterStatus = 'All';
+                  _filterAssets();
+                });
+              } else {
+                // Navigate to add asset page
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => const Placeholder()), // Replace with actual AddAssetPage
+                );
+              }
+            },
+            icon: Icon(
+              searchQuery.isNotEmpty || filterCategory != 'All' || filterStatus != 'All'
+                  ? Icons.clear_all
+                  : Icons.add,
+            ),
+            label: Text(
+              searchQuery.isNotEmpty || filterCategory != 'All' || filterStatus != 'All'
+                  ? 'Clear Filters'
+                  : 'Add Asset',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    } else {
+      return DateFormat('MMM d, yyyy').format(dateTime);
+    }
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Filter Assets'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Category'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: categories.map((category) {
+                      return ChoiceChip(
+                        label: Text(category),
+                        selected: filterCategory == category,
+                        onSelected: (selected) {
+                          setDialogState(() {
+                            filterCategory = selected ? category : 'All';
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Status'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: statuses.map((status) {
+                      return ChoiceChip(
+                        label: Text(status),
+                        selected: filterStatus == status,
+                        onSelected: (selected) {
+                          setDialogState(() {
+                            filterStatus = selected ? status : 'All';
+                          });
+                        },
+                        backgroundColor: status == 'All' 
+                            ? null 
+                            : _getStatusColor(status).withOpacity(0.1),
+                        selectedColor: status == 'All' 
+                            ? null 
+                            : _getStatusColor(status).withOpacity(0.2),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _filterAssets();
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Center(
+                  child: Text(
+                    'Sort By',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.sort_by_alpha),
+                title: const Text('Name (A-Z)'),
+                onTap: () {
+                  setState(() {
+                    filteredAssets.sort((a, b) => a.name.compareTo(b.name));
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.sort_by_alpha),
+                title: const Text('Name (Z-A)'),
+                onTap: () {
+                  setState(() {
+                    filteredAssets.sort((a, b) => b.name.compareTo(a.name));
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Last Updated (Newest First)'),
+                onTap: () {
+                  setState(() {
+                    filteredAssets.sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Last Updated (Oldest First)'),
+                onTap: () {
+                  setState(() {
+                    filteredAssets.sort((a, b) => a.lastUpdated.compareTo(b.lastUpdated));
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.star),
+                title: const Text('Condition (Best First)'),
+                onTap: () {
+                  setState(() {
+                    filteredAssets.sort((a, b) => b.condition.compareTo(a.condition));
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class Asset {
+  final String id;
+  final String name;
+  final String category;
+  final String status;
+  final String assignedTo;
+  final String location;
+  final DateTime lastUpdated;
+  final double condition;
+
+  Asset({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.status,
+    required this.assignedTo,
+    required this.location,
+    required this.lastUpdated,
+    required this.condition,
+  });
+}
